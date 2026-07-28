@@ -1,0 +1,2472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    if (sessionStorage.getItem('demoLoggedIn') !== 'true') {
+      window.location.replace('./index.html');
+    }
+  </script>
+
+  <title>内河散货船队物联智航辅助调度系统</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      color: #dbeeff;
+      background:
+        radial-gradient(circle at 42% 35%, rgba(0, 105, 180, 0.23), transparent 42%),
+        linear-gradient(135deg, #020713 0%, #03172d 50%, #020814 100%);
+    }
+
+    .dashboard {
+      width: 100%;
+      height: 100%;
+      padding: 14px 18px 18px;
+      background-image:
+        linear-gradient(rgba(0, 180, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 180, 255, 0.035) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    .topbar {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 195, 255, 0.28);
+      position: relative;
+    }
+
+    .topbar::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -1px;
+      width: 450px;
+      height: 2px;
+      background: linear-gradient(90deg, #00e5ff, transparent);
+      box-shadow: 0 0 16px #00e5ff;
+    }
+
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .main-title {
+      font-size: 29px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #f4fbff;
+      text-shadow: 0 0 14px rgba(0, 180, 255, 0.75);
+      white-space: nowrap;
+    }
+
+    .divider {
+      width: 1px;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.45);
+    }
+
+    .sub-title {
+      font-size: 20px;
+      color: #c8e7ff;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    .top-info {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 17px;
+      color: #dcecff;
+      white-space: nowrap;
+    }
+
+    .bell {
+      position: relative;
+      font-size: 25px;
+    }
+
+    .bell span {
+      position: absolute;
+      right: -10px;
+      top: -8px;
+      width: 22px;
+      height: 22px;
+      line-height: 22px;
+      text-align: center;
+      border-radius: 50%;
+      background: #f23b3b;
+      color: #fff;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .main {
+      height: calc(100% - 76px);
+      display: grid;
+      grid-template-columns: 220px minmax(680px, 1fr) 560px;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .tech-box {
+      position: relative;
+      background: rgba(2, 20, 43, 0.76);
+      border: 1px solid rgba(0, 196, 255, 0.38);
+      box-shadow:
+        inset 0 0 30px rgba(0, 156, 255, 0.08),
+        0 0 22px rgba(0, 148, 255, 0.12);
+      overflow: hidden;
+    }
+
+    .tech-box::before,
+    .tech-box::after {
+      content: "";
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border-color: #00d8ff;
+      border-style: solid;
+      pointer-events: none;
+      z-index: 40;
+    }
+
+    .tech-box::before {
+      left: 0;
+      top: 0;
+      border-width: 2px 0 0 2px;
+    }
+
+    .tech-box::after {
+      right: 0;
+      bottom: 0;
+      border-width: 0 2px 2px 0;
+    }
+
+    .sidebar {
+      padding: 13px 0;
+    }
+
+    .menu-item {
+      height: 63px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 18px;
+      margin: 4px 9px;
+      color: #bdd4ee;
+      font-size: 19px;
+      border-bottom: 1px solid rgba(112, 202, 255, 0.12);
+      position: relative;
+      cursor: pointer;
+      transition: all 0.22s ease;
+      user-select: none;
+    }
+
+    .menu-item:hover {
+      color: #18e7ff;
+      background: rgba(0, 170, 255, 0.08);
+    }
+
+    .menu-item.active {
+      color: #19e6ff;
+      background: linear-gradient(90deg, rgba(0, 183, 255, 0.3), rgba(0, 183, 255, 0.05));
+      border: 1px solid rgba(0, 227, 255, 0.65);
+      box-shadow:
+        inset 0 0 22px rgba(0, 204, 255, 0.2),
+        0 0 16px rgba(0, 204, 255, 0.18);
+      border-radius: 4px;
+    }
+
+    .menu-icon {
+      width: 25px;
+      text-align: center;
+      font-size: 22px;
+    }
+
+    .badge {
+      position: absolute;
+      right: 12px;
+      top: 18px;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      background: #f33c3c;
+      color: #fff;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .center-panel {
+      display: grid;
+      grid-template-rows: 142px minmax(360px, 1fr) 128px;
+      gap: 14px;
+    }
+
+    .capability-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .capability-card {
+      padding: 18px;
+    }
+
+    .capability-icon {
+      font-size: 30px;
+      margin-bottom: 10px;
+      color: #2eeaff;
+      text-shadow: 0 0 12px rgba(0, 220, 255, 0.75);
+    }
+
+    .capability-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f3fbff;
+      margin-bottom: 8px;
+    }
+
+    .capability-desc {
+      font-size: 14px;
+      line-height: 1.45;
+      color: #9dbbd8;
+    }
+
+    .map-card {
+      padding: 12px;
+    }
+
+    .map-wrap {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      border: 1px solid rgba(0, 202, 255, 0.45);
+      overflow: hidden;
+      background: #031225;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: #031225;
+    }
+
+    .leaflet-tile-pane {
+      filter: brightness(0.82) contrast(1.18) saturate(1.08);
+    }
+
+    .map-wrap.remote-dark .leaflet-tile-pane {
+      filter: brightness(0.55) contrast(1.35) saturate(0.95);
+    }
+
+    .leaflet-control-attribution {
+      background: rgba(0, 14, 30, 0.55) !important;
+      color: rgba(210, 230, 255, 0.65) !important;
+      font-size: 10px;
+    }
+
+    .remote-grid {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0, 255, 255, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.12) 1px, transparent 1px);
+      background-size: 80px 80px;
+      opacity: 0.18;
+      mix-blend-mode: screen;
+    }
+
+    .remote-grid::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent, rgba(0, 255, 255, 0.12), transparent);
+      animation: scan 5s linear infinite;
+    }
+
+    .remote-grid.hide {
+      display: none;
+    }
+
+    @keyframes scan {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100%); }
+    }
+
+    .map-header {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 13px;
+      background: rgba(2, 18, 38, 0.88);
+      border: 1px solid rgba(0, 220, 255, 0.55);
+      color: #eaf7ff;
+      font-size: 16px;
+      border-radius: 4px;
+      box-shadow: 0 0 18px rgba(0, 200, 255, 0.18);
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      background: #25ff8a;
+      border-radius: 50%;
+      box-shadow: 0 0 12px #25ff8a;
+      animation: blink 1.2s infinite;
+    }
+
+    .decision-banner {
+      position: absolute;
+      left: 14px;
+      top: 106px;
+      z-index: 21;
+      width: 520px;
+      padding: 10px 14px;
+      background: linear-gradient(90deg, rgba(3, 25, 54, 0.92), rgba(0, 72, 112, 0.62));
+      border: 1px solid rgba(255, 204, 74, 0.58);
+      border-radius: 5px;
+      box-shadow: 0 0 20px rgba(255, 196, 54, 0.16);
+      pointer-events: none;
+    }
+
+    .decision-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff5cc;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .decision-text {
+      font-size: 13px;
+      line-height: 1.45;
+      color: #dcecff;
+    }
+
+    .decision-text strong {
+      color: #ffcc4a;
+      font-weight: 800;
+    }
+
+    .map-search {
+      position: absolute;
+      left: 14px;
+      top: 61px;
+      z-index: 20;
+      width: 300px;
+      height: 38px;
+      display: flex;
+      background: rgba(2, 18, 38, 0.88);
+      border: 1px solid rgba(0, 220, 255, 0.42);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .map-search input {
+      flex: 1;
+      border: 0;
+      outline: none;
+      padding: 0 12px;
+      color: #dcecff;
+      background: transparent;
+      font-size: 13px;
+    }
+
+    .map-search button {
+      width: 68px;
+      border: 0;
+      border-left: 1px solid rgba(0, 220, 255, 0.36);
+      background: rgba(0, 130, 180, 0.48);
+      color: #18e7ff;
+      cursor: pointer;
+    }
+
+    .map-toolbar {
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      z-index: 20;
+      display: flex;
+      gap: 8px;
+    }
+
+    .map-btn {
+      height: 34px;
+      padding: 0 11px;
+      border: 1px solid rgba(0, 210, 255, 0.58);
+      background: rgba(0, 40, 82, 0.88);
+      color: #bfefff;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .map-btn.active,
+    .map-btn:hover {
+      color: #1eeaff;
+      background: rgba(0, 128, 180, 0.58);
+      box-shadow: 0 0 14px rgba(0, 220, 255, 0.32);
+    }
+
+    .layer-box {
+      position: absolute;
+      right: 14px;
+      top: 58px;
+      z-index: 20;
+      width: 174px;
+      padding: 10px 12px;
+      background: rgba(2, 18, 38, 0.88);
+      border: 1px solid rgba(0, 220, 255, 0.42);
+      border-radius: 4px;
+      font-size: 13px;
+      color: #dcecff;
+      line-height: 1.9;
+    }
+
+    .layer-box label {
+      display: block;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .map-legend {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      z-index: 20;
+      padding: 10px 14px;
+      background: rgba(2, 18, 38, 0.88);
+      border: 1px solid rgba(0, 220, 255, 0.45);
+      border-radius: 4px;
+      font-size: 13px;
+      color: #dcecff;
+      line-height: 1.8;
+      box-shadow: 0 0 18px rgba(0, 200, 255, 0.12);
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-ship {
+      width: 0;
+      height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-bottom: 17px solid #23e782;
+    }
+
+    .legend-ship.target {
+      border-bottom-color: #00eaff;
+    }
+
+    .legend-ship.company {
+      border-bottom-color: #2b83ff;
+    }
+
+    .legend-ship.orange {
+      border-bottom-color: #ff9b22;
+    }
+
+    .legend-ship.red {
+      border-bottom-color: #ff4040;
+    }
+
+    .legend-line {
+      width: 28px;
+      height: 3px;
+      background: #18d9ff;
+      border-radius: 2px;
+    }
+
+    .legend-line.dash {
+      background: repeating-linear-gradient(
+        90deg,
+        #18d9ff 0,
+        #18d9ff 8px,
+        transparent 8px,
+        transparent 14px
+      );
+    }
+
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+    }
+
+    .metric-card {
+      padding: 16px;
+    }
+
+    .metric-num {
+      font-size: 30px;
+      font-weight: 800;
+      color: #27e8ff;
+      margin-bottom: 7px;
+    }
+
+    .metric-name {
+      font-size: 14px;
+      color: #a8c5e4;
+      line-height: 1.4;
+    }
+
+    .right-panel {
+      display: grid;
+      grid-template-rows: 218px 1fr 230px;
+      gap: 16px;
+    }
+
+    .panel {
+      padding: 16px 18px;
+    }
+
+    .panel-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #eef8ff;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title span {
+      font-size: 13px;
+      color: #7fb5df;
+      font-weight: 400;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      min-height: 72px;
+      background: rgba(0, 35, 72, 0.58);
+      border: 1px solid rgba(0, 174, 255, 0.33);
+      border-radius: 5px;
+      padding: 12px;
+    }
+
+    .stat-num {
+      font-size: 28px;
+      font-weight: 800;
+      color: #27e8ff;
+      margin-bottom: 5px;
+    }
+
+    .stat-name {
+      font-size: 14px;
+      color: #a8c5e4;
+    }
+
+    .detail-card {
+      background: rgba(0, 35, 72, 0.58);
+      border: 1px solid rgba(0, 174, 255, 0.33);
+      border-radius: 5px;
+      padding: 14px;
+      min-height: 100%;
+    }
+
+    .detail-title {
+      font-size: 23px;
+      font-weight: 800;
+      color: #39e7ff;
+      margin-bottom: 12px;
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 8px;
+      font-size: 15px;
+      line-height: 1.8;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .detail-key {
+      color: #91b7d9;
+    }
+
+    .detail-val {
+      color: #f1f8ff;
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      height: 38px;
+      border: 1px solid rgba(0, 212, 255, 0.7);
+      border-radius: 4px;
+      background: rgba(0, 95, 150, 0.28);
+      color: #13dfff;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.25s;
+    }
+
+    .btn:hover {
+      background: rgba(0, 195, 255, 0.25);
+      box-shadow: 0 0 14px rgba(0, 220, 255, 0.45);
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 100%;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .list::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .list::-webkit-scrollbar-thumb {
+      background: rgba(0, 210, 255, 0.35);
+      border-radius: 4px;
+    }
+
+    .list-item {
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: 42px 1fr 74px;
+      align-items: center;
+      padding: 9px 10px;
+      border: 1px solid rgba(0, 174, 255, 0.28);
+      background: rgba(0, 35, 72, 0.52);
+      border-radius: 5px;
+    }
+
+    .list-icon {
+      font-size: 24px;
+      color: #38dc7a;
+    }
+
+    .list-main {
+      font-size: 16px;
+      color: #dcecff;
+      margin-bottom: 4px;
+    }
+
+    .list-sub {
+      font-size: 13px;
+      color: #97b5d4;
+      line-height: 1.4;
+    }
+
+    .small-btn {
+      height: 32px;
+      border: 1px solid rgba(0, 212, 255, 0.65);
+      border-radius: 4px;
+      background: rgba(0, 95, 150, 0.22);
+      color: #13dfff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .status-ok {
+      color: #37f27c;
+    }
+
+    .status-warn {
+      color: #ff9b22;
+    }
+
+    .status-danger {
+      color: #ff4040;
+    }
+
+    .vessel-icon {
+      width: 32px;
+      height: 32px;
+      position: relative;
+      transform-origin: center;
+    }
+
+    .vessel-triangle {
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-bottom: 24px solid #25e783;
+      filter: drop-shadow(0 0 6px rgba(37, 231, 131, 0.95));
+      position: absolute;
+      left: 8px;
+      top: 3px;
+    }
+
+    .vessel-triangle.target {
+      border-left-width: 10px;
+      border-right-width: 10px;
+      border-bottom-width: 30px;
+      border-bottom-color: #00eaff;
+      filter: drop-shadow(0 0 10px rgba(0, 234, 255, 1));
+      left: 6px;
+      top: 0;
+    }
+
+    .vessel-triangle.company {
+      border-bottom-color: #2b83ff;
+      filter: drop-shadow(0 0 8px rgba(43, 131, 255, 0.95));
+    }
+
+    .vessel-triangle.orange {
+      border-bottom-color: #ff9b22;
+      filter: drop-shadow(0 0 6px rgba(255, 155, 34, 0.95));
+    }
+
+    .vessel-triangle.red {
+      border-bottom-color: #ff4040;
+      filter: drop-shadow(0 0 8px rgba(255, 64, 64, 1));
+    }
+
+    .vessel-label {
+      padding: 3px 7px;
+      background: rgba(0, 22, 42, 0.82);
+      border: 1px solid rgba(0, 220, 255, 0.45);
+      color: #f3fbff;
+      font-size: 12px;
+      border-radius: 3px;
+      white-space: nowrap;
+      text-shadow: 0 0 8px rgba(0, 160, 255, 0.9);
+    }
+
+    .vessel-label.target {
+      color: #00eaff;
+      border-color: rgba(0, 234, 255, 0.9);
+      box-shadow: 0 0 12px rgba(0, 234, 255, 0.45);
+      font-weight: 700;
+    }
+
+    .port-marker {
+      width: 34px;
+      height: 34px;
+      transform: translate(-17px, -17px);
+      border-radius: 7px;
+      background: rgba(0, 180, 255, 0.24);
+      border: 1px solid rgba(0, 215, 255, 0.78);
+      color: #9feeff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      box-shadow: 0 0 16px rgba(0, 200, 255, 0.45);
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: rgba(5, 22, 45, 0.96);
+      color: #dcecff;
+      border: 1px solid rgba(0, 210, 255, 0.5);
+      box-shadow: 0 0 20px rgba(0, 180, 255, 0.25);
+      border-radius: 6px;
+    }
+
+    .leaflet-popup-tip {
+      background: rgba(5, 22, 45, 0.96);
+    }
+
+    .popup-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #35e7ff;
+      margin-bottom: 8px;
+    }
+
+    .popup-grid {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 5px 8px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .popup-key {
+      color: #8fb5d8;
+    }
+
+    .popup-val {
+      color: #f1f8ff;
+    }
+
+    .bottom-table {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      z-index: 22;
+      height: 180px;
+      background: rgba(2, 18, 38, 0.94);
+      border: 1px solid rgba(0, 220, 255, 0.45);
+      border-radius: 4px;
+      display: none;
+      overflow: hidden;
+    }
+
+    .bottom-table.show {
+      display: block;
+    }
+
+    .table-title {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      color: #eaf7ff;
+      border-bottom: 1px solid rgba(0, 220, 255, 0.25);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .table-close {
+      cursor: pointer;
+      color: #1eeaff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      color: #dcecff;
+    }
+
+    th,
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(0, 220, 255, 0.1);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      color: #43e8ff;
+      font-weight: 600;
+      background: rgba(0, 120, 190, 0.18);
+    }
+
+    tr:hover td {
+      background: rgba(0, 180, 255, 0.12);
+      cursor: pointer;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+
+    @media (max-width: 1500px) {
+      .main {
+        grid-template-columns: 205px minmax(600px, 1fr) 500px;
+      }
+
+      .main-title {
+        font-size: 24px;
+      }
+
+      .sub-title {
+        font-size: 18px;
+      }
+
+      .menu-item {
+        font-size: 17px;
+      }
+
+      .right-panel {
+        grid-template-rows: 205px 1fr 220px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="dashboard">
+
+    <header class="topbar">
+      <div class="title-group">
+        <div class="main-title">内河散货船队物联智航辅助调度系统</div>
+        <div class="divider"></div>
+        <div class="sub-title" id="pageSubTitle">船端感知｜ETA预测｜风险预警｜辅助调度建议</div>
+      </div>
+
+      <div class="top-info">
+        <div>重点区域：重庆长江段</div>
+        <div>目标船：凯乔1001</div>
+        <div>🕘 <span id="nowTime">2026-05-23 09:30</span></div>
+        <div class="bell">🔔 <span>3</span></div>
+      </div>
+    </header>
+
+    <main class="main">
+
+      <aside class="sidebar tech-box">
+        <div class="menu-item active" data-view="overview">
+          <div class="menu-icon">▣</div>
+          <div>系统总览</div>
+        </div>
+
+        <div class="menu-item" data-view="voyage">
+          <div class="menu-icon">⚓</div>
+          <div>航次跟踪</div>
+        </div>
+
+        <div class="menu-item" data-view="sensor">
+          <div class="menu-icon">▧</div>
+          <div>船端数据</div>
+        </div>
+
+        <div class="menu-item" data-view="eta">
+          <div class="menu-icon">◴</div>
+          <div>ETA预测</div>
+        </div>
+
+        <div class="menu-item" data-view="warning">
+          <div class="menu-icon">⚠</div>
+          <div>风险预警</div>
+          <div class="badge">3</div>
+        </div>
+
+        <div class="menu-item" data-view="dispatch">
+          <div class="menu-icon">▤</div>
+          <div>调度建议</div>
+        </div>
+
+        <div class="menu-item" data-view="fleet">
+          <div class="menu-icon">▦</div>
+          <div>公司船队</div>
+        </div>
+
+        <div class="menu-item" data-view="analysis">
+          <div class="menu-icon">▥</div>
+          <div>数据分析</div>
+        </div>
+      </aside>
+
+      <section class="center-panel">
+
+        <div class="capability-row">
+          <section class="capability-card tech-box">
+            <div class="capability-icon">🛰</div>
+            <div class="capability-title">船端数据接入</div>
+            <div class="capability-desc">融合北斗/AIS、吃水、燃油、机舱与船载网关数据。</div>
+          </section>
+
+          <section class="capability-card tech-box">
+            <div class="capability-icon">◴</div>
+            <div class="capability-title">ETA航次预测</div>
+            <div class="capability-desc">结合船位、航速、港口状态与前方船舶密度预测到港。</div>
+          </section>
+
+          <section class="capability-card tech-box">
+            <div class="capability-icon">⚠</div>
+            <div class="capability-title">动态风险预警</div>
+            <div class="capability-desc">识别拥堵、低速、停泊超时、油耗波动与靠泊风险。</div>
+          </section>
+
+          <section class="capability-card tech-box">
+            <div class="capability-icon">▤</div>
+            <div class="capability-title">智能调度建议</div>
+            <div class="capability-desc">输出错峰通行、靠泊确认、航速调整和任务优化建议。</div>
+          </section>
+        </div>
+
+        <section class="map-card tech-box">
+          <div class="map-wrap" id="mapWrap">
+            <div id="map"></div>
+            <div class="remote-grid" id="remoteGrid"></div>
+
+            <div class="map-header">
+              <span class="live-dot"></span>
+              <span id="mapHeaderText">演示场景 · 凯乔1001 重庆港至万州港航次</span>
+            </div>
+
+            <div class="decision-banner" id="decisionBanner">
+              <div class="decision-title">当前航次：凯乔1001｜重庆港 → 万州港</div>
+              <div class="decision-text">系统判断：万州港前方船舶密度升高，预计延误 <strong>+0.8h</strong>，建议提前确认靠泊窗口。</div>
+            </div>
+
+            <div class="map-search">
+              <input id="shipSearchInput" placeholder="搜索船名 / MMSI，例如：凯乔1001" />
+              <button id="shipSearchBtn">搜索</button>
+            </div>
+
+            <div class="map-toolbar">
+              <button class="map-btn active" id="remoteBtn">遥感影像</button>
+              <button class="map-btn" id="darkRemoteBtn">深色遥感</button>
+              <button class="map-btn" id="tableBtn">船舶列表</button>
+              <button class="map-btn" id="resetBtn">回到目标船</button>
+            </div>
+
+            <div class="layer-box">
+              <label><input type="checkbox" id="toggleTargetRoute" checked /> 目标船航线</label>
+              <label><input type="checkbox" id="toggleCompanyShips" checked /> 凯乔船队</label>
+              <label><input type="checkbox" id="toggleOtherShips" checked /> 周边船舶</label>
+              <label><input type="checkbox" id="toggleLabels" checked /> 船名标注</label>
+              <label><input type="checkbox" id="togglePorts" checked /> 沿线港口</label>
+              <label><input type="checkbox" id="toggleRisk" checked /> 风险水域</label>
+              <label><input type="checkbox" id="toggleGrid" checked /> 遥感网格</label>
+            </div>
+
+            <div class="map-legend">
+              <div class="legend-row">
+                <span class="legend-ship target"></span>
+                <span>目标船：凯乔1001</span>
+              </div>
+              <div class="legend-row">
+                <span class="legend-ship company"></span>
+                <span>凯乔公司船只</span>
+              </div>
+              <div class="legend-row">
+                <span class="legend-ship"></span>
+                <span>周边正常船舶</span>
+              </div>
+              <div class="legend-row">
+                <span class="legend-ship orange"></span>
+                <span>低速 / 停泊</span>
+              </div>
+              <div class="legend-row">
+                <span class="legend-ship red"></span>
+                <span>风险船舶</span>
+              </div>
+              <div class="legend-row">
+                <span class="legend-line"></span>
+                <span>目标船已行驶轨迹</span>
+              </div>
+              <div class="legend-row">
+                <span class="legend-line dash"></span>
+                <span>目标船预计航线</span>
+              </div>
+            </div>
+
+            <div class="bottom-table" id="bottomTable">
+              <div class="table-title">
+                <span>重庆长江段船舶态势列表</span>
+                <span class="table-close" id="closeTable">收起 ×</span>
+              </div>
+
+              <table>
+                <thead>
+                  <tr>
+                    <th>船名</th>
+                    <th>企业</th>
+                    <th>类型</th>
+                    <th>航速</th>
+                    <th>吃水</th>
+                    <th>起运港</th>
+                    <th>目的港</th>
+                    <th>ETA</th>
+                    <th>状态</th>
+                  </tr>
+                </thead>
+                <tbody id="shipTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <div class="metrics-row">
+          <section class="metric-card tech-box">
+            <div class="metric-num">45</div>
+            <div class="metric-name">累计接入船舶</div>
+          </section>
+
+          <section class="metric-card tech-box">
+            <div class="metric-num">91%</div>
+            <div class="metric-name">船端数据在线率</div>
+          </section>
+
+          <section class="metric-card tech-box">
+            <div class="metric-num">86%</div>
+            <div class="metric-name">ETA预测稳定度</div>
+          </section>
+
+          <section class="metric-card tech-box">
+            <div class="metric-num">18min</div>
+            <div class="metric-name">平均预警响应时长</div>
+          </section>
+
+          <section class="metric-card tech-box">
+            <div class="metric-num">14.8%</div>
+            <div class="metric-name">试点周转效率提升</div>
+          </section>
+        </div>
+
+      </section>
+
+      <aside class="right-panel">
+        <section class="panel tech-box" id="topPanel"></section>
+        <section class="panel tech-box" id="middlePanel"></section>
+        <section class="panel tech-box" id="bottomPanel"></section>
+      </aside>
+
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    const viewNames = {
+      overview: "重庆长江沿线船队智能调度平台",
+      voyage: "目标船航次跟踪",
+      sensor: "船端数据感知",
+      eta: "ETA航次预测",
+      warning: "动态风险预警",
+      dispatch: "智能调度建议",
+      fleet: "公司船队运行态势",
+      analysis: "运营数据分析"
+    };
+
+    const targetShipId = "target-kq1001";
+
+    // 航线优化说明：
+    // 原页面采用“港口点直接连线”，容易出现航线切穿陆地、船舶偏离江面的视觉问题。
+    // 这里改为“重庆港—万州港—奉节方向”的演示级长江航道中心线，点位更密集，弯道更顺。
+    // 如后续接入真实 AIS/电子航道数据，只需要替换 routeMain / targetRoute 坐标即可。
+    const routeMain = [
+      [29.563, 106.550], [29.565, 106.590], [29.585, 106.635], [29.615, 106.680],
+      [29.650, 106.725], [29.690, 106.780], [29.735, 106.845], [29.780, 106.920],
+      [29.812, 106.985], [29.834, 107.080], [29.812, 107.145], [29.765, 107.215],
+      [29.720, 107.300], [29.703, 107.395], [29.725, 107.465], [29.770, 107.535],
+      [29.815, 107.610], [29.866, 107.730], [29.920, 107.790], [29.985, 107.850],
+      [30.050, 107.900], [30.120, 107.950], [30.205, 108.000], [30.300, 108.037],
+      [30.365, 108.080], [30.430, 108.125], [30.500, 108.185], [30.570, 108.235],
+      [30.640, 108.290], [30.720, 108.335], [30.807, 108.380], [30.850, 108.465],
+      [30.885, 108.560], [30.930, 108.697], [30.950, 108.820], [30.980, 108.960],
+      [31.005, 109.120], [31.020, 109.300], [31.020, 109.530]
+    ];
+
+    // 目标船本次演示航次：重庆港 → 万州港
+    const targetRoute = routeMain.slice(0, 31);
+
+    const targetProgress = 0.42;
+
+    const ports = [
+      { name: "重庆港", lat: 29.563, lng: 106.550, status: "起运港" },
+      { name: "长寿港", lat: 29.834, lng: 107.080, status: "正常" },
+      { name: "涪陵港", lat: 29.703, lng: 107.395, status: "繁忙" },
+      { name: "丰都港", lat: 29.866, lng: 107.730, status: "正常" },
+      { name: "忠县港", lat: 30.300, lng: 108.037, status: "繁忙" },
+      { name: "万州港", lat: 30.807, lng: 108.380, status: "目的港 / 拥堵" },
+      { name: "云阳港", lat: 30.930, lng: 108.697, status: "正常" },
+      { name: "奉节港", lat: 31.020, lng: 109.530, status: "正常" }
+    ];
+
+    const targetShipBase = {
+      id: targetShipId,
+      name: "凯乔1001",
+      mmsi: "413778901",
+      type: "干散货船",
+      company: "凯乔船务有限公司",
+      registry: "重庆",
+      routeT: targetProgress,
+      lane: 0,
+      speed: 10.8,
+      draft: 4.8,
+      length: 92,
+      dwt: 3100,
+      cargo: "矿建材料",
+      from: "重庆港",
+      dest: "万州港",
+      eta: "05-23 18:20",
+      status: "正常航行",
+      level: "target",
+      update: "09:30:21"
+    };
+
+    const companyShipsBase = [
+      {
+        id: "kq1002",
+        name: "凯乔1002",
+        mmsi: "413778902",
+        type: "干散货船",
+        company: "凯乔船务有限公司",
+        registry: "重庆",
+        routeT: 0.34,
+        lane: 1,
+        speed: 9.6,
+        draft: 4.5,
+        length: 88,
+        dwt: 2800,
+        cargo: "煤炭",
+        from: "涪陵港",
+        dest: "云阳港",
+        eta: "05-23 21:10",
+        status: "正常航行",
+        level: "company",
+        update: "09:30:18"
+      },
+      {
+        id: "kq1003",
+        name: "凯乔1003",
+        mmsi: "413778903",
+        type: "干散货船",
+        company: "凯乔船务有限公司",
+        registry: "重庆",
+        routeT: 0.61,
+        lane: -1,
+        speed: 3.2,
+        draft: 5.1,
+        length: 96,
+        dwt: 3500,
+        cargo: "砂石",
+        from: "忠县港",
+        dest: "万州港",
+        eta: "05-24 09:20",
+        status: "低速航行",
+        level: "slow",
+        update: "09:29:58"
+      },
+      {
+        id: "kq1005",
+        name: "凯乔1005",
+        mmsi: "413778905",
+        type: "干散货船",
+        company: "凯乔船务有限公司",
+        registry: "重庆",
+        routeT: 0.76,
+        lane: 1,
+        speed: 1.5,
+        draft: 5.4,
+        length: 98,
+        dwt: 3800,
+        cargo: "矿粉",
+        from: "万州港",
+        dest: "奉节港",
+        eta: "05-24 11:00",
+        status: "拥堵预警",
+        level: "danger",
+        update: "09:30:12"
+      }
+    ];
+
+    const otherShipNames = [
+      "渝货218", "皖江618", "长航659", "江达2088",
+      "民生326", "华盛889", "顺达777", "江顺128",
+      "宜航805", "华航226", "渝港621", "恒通516",
+      "江安219", "长运360", "金航302", "三峡货318"
+    ];
+
+    function distance(a, b) {
+      const dx = b[1] - a[1];
+      const dy = b[0] - a[0];
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function routeTotalLength(route) {
+      let total = 0;
+      for (let i = 0; i < route.length - 1; i++) {
+        total += distance(route[i], route[i + 1]);
+      }
+      return total;
+    }
+
+    function getPointOnRoute(route, t) {
+      const totalLength = routeTotalLength(route);
+      const target = totalLength * Math.max(0, Math.min(1, t));
+      let accumulated = 0;
+
+      for (let i = 0; i < route.length - 1; i++) {
+        const p1 = route[i];
+        const p2 = route[i + 1];
+        const segLength = distance(p1, p2);
+
+        if (accumulated + segLength >= target) {
+          const localT = (target - accumulated) / segLength;
+          const lat = p1[0] + (p2[0] - p1[0]) * localT;
+          const lng = p1[1] + (p2[1] - p1[1]) * localT;
+          const dy = p2[0] - p1[0];
+          const dx = p2[1] - p1[1];
+          const heading = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+
+          return { lat, lng, heading, segmentIndex: i, p1, p2 };
+        }
+
+        accumulated += segLength;
+      }
+
+      const last = route[route.length - 1];
+      const prev = route[route.length - 2];
+      const dy = last[0] - prev[0];
+      const dx = last[1] - prev[1];
+      const heading = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+
+      return {
+        lat: last[0],
+        lng: last[1],
+        heading,
+        segmentIndex: route.length - 2,
+        p1: prev,
+        p2: last
+      };
+    }
+
+    function laneOffset(pointInfo, lane, index) {
+      const p1 = pointInfo.p1;
+      const p2 = pointInfo.p2;
+      const dy = p2[0] - p1[0];
+      const dx = p2[1] - p1[1];
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const normalLat = -dx / len;
+      const normalLng = dy / len;
+      // 船舶左右偏移只用于视觉区分，不代表真实航道偏航。
+      // 原值 0.0024 在卫星底图上容易把船推到岸上，这里缩小到更贴近江面的范围。
+      const laneDistance = 0.0009;
+      const tinySpread = ((index % 3) - 1) * 0.00016;
+      const finalOffset = lane * laneDistance + tinySpread;
+
+      return {
+        lat: pointInfo.lat + normalLat * finalOffset,
+        lng: pointInfo.lng + normalLng * finalOffset
+      };
+    }
+
+    function attachPosition(ship, index, route = routeMain) {
+      const pointInfo = getPointOnRoute(route, ship.routeT);
+
+      if (ship.id === targetShipId) {
+        return {
+          ...ship,
+          lat: pointInfo.lat,
+          lng: pointInfo.lng,
+          heading: pointInfo.heading
+        };
+      }
+
+      const shifted = laneOffset(pointInfo, ship.lane, index);
+
+      return {
+        ...ship,
+        lat: shifted.lat,
+        lng: shifted.lng,
+        heading: pointInfo.heading
+      };
+    }
+
+    function generateOtherShips() {
+      const progressList = [
+        0.06, 0.12, 0.18, 0.23,
+        0.29, 0.38, 0.45, 0.50,
+        0.56, 0.63, 0.69, 0.74,
+        0.80, 0.86, 0.91, 0.96
+      ];
+
+      return otherShipNames.map((name, index) => {
+        const levels = ["normal", "normal", "slow", "normal", "normal", "danger"];
+        const level = levels[index % levels.length];
+
+        return {
+          id: "ship-" + index,
+          name,
+          mmsi: "4137" + String(70000 + index * 37),
+          type: index % 3 === 0 ? "干散货船" : "散货船",
+          company: index % 4 === 0 ? "个体船东" : "协作船队",
+          registry: index % 2 === 0 ? "重庆" : "湖北",
+          routeT: progressList[index],
+          lane: index % 2 === 0 ? 1 : -1,
+          speed: level === "slow" ? Number((1.2 + index % 3).toFixed(1)) : Number((6.5 + (index % 6) * 0.8).toFixed(1)),
+          draft: Number((3.7 + (index % 5) * 0.35).toFixed(1)),
+          length: 75 + (index % 7) * 4,
+          dwt: 2000 + (index % 8) * 220,
+          cargo: ["砂石", "煤炭", "矿建材料", "粮食", "钢材"][index % 5],
+          from: ["重庆港", "长寿港", "涪陵港", "忠县港"][index % 4],
+          dest: ["涪陵港", "忠县港", "万州港", "奉节港"][index % 4],
+          eta: "05-24 " + String(8 + (index % 12)).padStart(2, "0") + ":" + String((index * 7) % 60).padStart(2, "0"),
+          status: level === "normal" ? "正常航行" : level === "slow" ? "低速航行" : "异常预警",
+          level,
+          update: "09:" + String(28 + (index % 3)).padStart(2, "0") + ":" + String((12 + index * 2) % 60).padStart(2, "0")
+        };
+      });
+    }
+
+    const targetShip = attachPosition(targetShipBase, 0, targetRoute);
+    const companyShips = companyShipsBase.map((ship, index) => attachPosition(ship, index + 1));
+    const otherShips = generateOtherShips().map((ship, index) => attachPosition(ship, index + 10));
+    const allVessels = [targetShip, ...companyShips, ...otherShips];
+
+    function routeSlice(route, startT, endT) {
+      const start = getPointOnRoute(route, startT);
+      const end = getPointOnRoute(route, endT);
+      const points = [[start.lat, start.lng]];
+
+      for (let i = start.segmentIndex + 1; i <= end.segmentIndex; i++) {
+        points.push(route[i]);
+      }
+
+      points.push([end.lat, end.lng]);
+      return points;
+    }
+
+    const passedRoute = routeSlice(targetRoute, 0, targetProgress);
+    const futureRoute = routeSlice(targetRoute, targetProgress, 1);
+
+    const map = L.map("map", {
+      zoomControl: false,
+      minZoom: 7,
+      maxZoom: 18
+    }).setView([30.05, 107.72], 8);
+
+    L.control.zoom({
+      position: "bottomright"
+    }).addTo(map);
+
+    L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      {
+        maxZoom: 18,
+        attribution: "遥感影像底图"
+      }
+    ).addTo(map);
+
+    const targetRouteLayer = L.layerGroup().addTo(map);
+    const companyShipLayer = L.layerGroup().addTo(map);
+    const otherShipLayer = L.layerGroup().addTo(map);
+    const labelLayer = L.layerGroup().addTo(map);
+    const portLayer = L.layerGroup().addTo(map);
+    const riskLayer = L.layerGroup().addTo(map);
+
+    const vesselMarkers = {};
+
+    function getStatusClass(level) {
+      if (level === "danger") return "status-danger";
+      if (level === "slow") return "status-warn";
+      return "status-ok";
+    }
+
+    function getShipColorClass(v) {
+      if (v.id === targetShipId) return "target";
+      if (v.level === "danger") return "red";
+      if (v.level === "slow") return "orange";
+      if (v.company === "凯乔船务有限公司") return "company";
+      return "";
+    }
+
+    function makeVesselIcon(v) {
+      const color = getShipColorClass(v);
+
+      return L.divIcon({
+        className: "",
+        html: `
+          <div class="vessel-icon" style="transform: rotate(${v.heading}deg);">
+            <div class="vessel-triangle ${color}"></div>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+    }
+
+    function makeLabelIcon(v) {
+      const isTarget = v.id === targetShipId;
+      return L.divIcon({
+        className: "",
+        html: `<div class="vessel-label ${isTarget ? "target" : ""}">${v.name}</div>`,
+        iconSize: [96, 24],
+        iconAnchor: [-14, 10]
+      });
+    }
+
+    function makePortIcon() {
+      return L.divIcon({
+        className: "",
+        html: `<div class="port-marker">港</div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+      });
+    }
+
+    function popupTemplate(v) {
+      const title = v.id === targetShipId
+        ? `${v.name}｜目标船`
+        : v.company === "凯乔船务有限公司"
+          ? `${v.name}｜凯乔船队`
+          : `${v.name}｜周边船舶`;
+
+      return `
+        <div class="popup-title">${title}</div>
+        <div class="popup-grid">
+          <div class="popup-key">MMSI</div><div class="popup-val">${v.mmsi}</div>
+          <div class="popup-key">企业</div><div class="popup-val">${v.company}</div>
+          <div class="popup-key">类型</div><div class="popup-val">${v.type}</div>
+          <div class="popup-key">货物</div><div class="popup-val">${v.cargo}</div>
+          <div class="popup-key">航速</div><div class="popup-val">${v.speed} km/h</div>
+          <div class="popup-key">航向</div><div class="popup-val">${Math.round(v.heading)}°</div>
+          <div class="popup-key">吃水</div><div class="popup-val">${v.draft} m</div>
+          <div class="popup-key">航线</div><div class="popup-val">${v.from} → ${v.dest}</div>
+          <div class="popup-key">ETA</div><div class="popup-val">${v.eta}</div>
+          <div class="popup-key">状态</div><div class="popup-val ${getStatusClass(v.level)}">${v.status}</div>
+        </div>
+      `;
+    }
+
+    function drawMap() {
+      targetRouteLayer.clearLayers();
+      companyShipLayer.clearLayers();
+      otherShipLayer.clearLayers();
+      labelLayer.clearLayers();
+      portLayer.clearLayers();
+      riskLayer.clearLayers();
+
+      // 半透明航道走廊：先画一条宽线作为江面航道提示，再叠加已行驶/预计航线。
+      L.polyline(routeMain, {
+        color: "#0078ff",
+        weight: 13,
+        opacity: 0.16,
+        interactive: false
+      }).addTo(targetRouteLayer);
+
+      L.polyline(passedRoute, {
+        color: "#00eaff",
+        weight: 5,
+        opacity: 0.96
+      }).addTo(targetRouteLayer);
+
+      L.polyline(futureRoute, {
+        color: "#00eaff",
+        weight: 4,
+        opacity: 0.88,
+        dashArray: "10,9"
+      }).addTo(targetRouteLayer);
+
+      L.circle([30.807, 108.380], {
+        radius: 9000,
+        color: "#ff4040",
+        fillColor: "#ff4040",
+        fillOpacity: 0.13,
+        weight: 1
+      }).addTo(riskLayer);
+
+      L.circle([29.703, 107.395], {
+        radius: 7000,
+        color: "#ff9b22",
+        fillColor: "#ff9b22",
+        fillOpacity: 0.12,
+        weight: 1
+      }).addTo(riskLayer);
+
+      ports.forEach(p => {
+        L.marker([p.lat, p.lng], {
+          icon: makePortIcon()
+        }).bindPopup(`
+          <div class="popup-title">${p.name}</div>
+          <div class="popup-grid">
+            <div class="popup-key">状态</div><div class="popup-val">${p.status}</div>
+            <div class="popup-key">用途</div><div class="popup-val">用于航次预测、靠泊判断与调度建议</div>
+          </div>
+        `).addTo(portLayer);
+      });
+
+      allVessels.forEach(v => {
+        const marker = L.marker([v.lat, v.lng], {
+          icon: makeVesselIcon(v)
+        }).bindPopup(popupTemplate(v));
+
+        marker.on("click", () => {
+          if (v.id === targetShipId) {
+            renderTargetDetail();
+          } else if (v.company === "凯乔船务有限公司") {
+            renderCompanyShip(v);
+          } else {
+            renderNearbyShip(v);
+          }
+        });
+
+        if (v.id === targetShipId || v.company === "凯乔船务有限公司") {
+          marker.addTo(companyShipLayer);
+        } else {
+          marker.addTo(otherShipLayer);
+        }
+
+        vesselMarkers[v.id] = marker;
+
+        L.marker([v.lat, v.lng], {
+          icon: makeLabelIcon(v),
+          interactive: false
+        }).addTo(labelLayer);
+      });
+
+      renderShipTable();
+    }
+
+    function renderShipTable() {
+      const tbody = document.getElementById("shipTableBody");
+
+      tbody.innerHTML = allVessels.map(v => `
+        <tr data-id="${v.id}">
+          <td>${v.name}</td>
+          <td>${v.company}</td>
+          <td>${v.type}</td>
+          <td>${v.speed} km/h</td>
+          <td>${v.draft} m</td>
+          <td>${v.from}</td>
+          <td>${v.dest}</td>
+          <td>${v.eta}</td>
+          <td class="${getStatusClass(v.level)}">${v.status}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderTopOverview() {
+      document.getElementById("topPanel").innerHTML = `
+        <div class="panel-title">
+          平台能力总览
+          <span>船端—云端—调度</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-num">4</div>
+            <div class="stat-name">核心功能模块</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">8</div>
+            <div class="stat-name">重庆沿线节点</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">45</div>
+            <div class="stat-name">累计接入船舶</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">30s</div>
+            <div class="stat-name">数据刷新周期</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTargetDetail() {
+      document.getElementById("middlePanel").innerHTML = `
+        <div class="panel-title">
+          目标船详情
+          <span>凯乔1001</span>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-title">凯乔1001</div>
+
+          <div class="detail-row">
+            <div class="detail-key">运输任务</div>
+            <div class="detail-val">矿建材料｜重庆港 → 万州港</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">当前位置</div>
+            <div class="detail-val">重庆长江上游航道，接近涪陵段</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">航速 / 航向</div>
+            <div class="detail-val">${targetShip.speed} km/h｜${Math.round(targetShip.heading)}°</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">吃水</div>
+            <div class="detail-val">${targetShip.draft} m｜雷达吃水正常</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">ETA预测</div>
+            <div class="detail-val">${targetShip.eta}｜预计延误 +0.8h</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">风险判断</div>
+            <div class="detail-val">万州港前方船舶密度升高，建议提前确认靠泊窗口</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">当前状态</div>
+            <div class="detail-val status-ok">正常航行，持续监控</div>
+          </div>
+
+          <div class="action-row">
+            <button class="btn">轨迹回放</button>
+            <button class="btn">发送指令</button>
+            <button class="btn">调度建议</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCompanyShip(v) {
+      document.getElementById("middlePanel").innerHTML = `
+        <div class="panel-title">
+          公司船只状态
+          <span>重庆凯乔航运</span>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-title">${v.name}</div>
+
+          <div class="detail-row">
+            <div class="detail-key">运输任务</div>
+            <div class="detail-val">${v.cargo}｜${v.from} → ${v.dest}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">航速 / 吃水</div>
+            <div class="detail-val">${v.speed} km/h｜${v.draft} m</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">ETA</div>
+            <div class="detail-val">${v.eta}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">状态</div>
+            <div class="detail-val ${getStatusClass(v.level)}">${v.status}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">平台作用</div>
+            <div class="detail-val">用于公司船队统一监控、风险预警与调度协同</div>
+          </div>
+
+          <div class="action-row">
+            <button class="btn">查看航次</button>
+            <button class="btn">加入关注</button>
+            <button class="btn">调度处理</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderNearbyShip(v) {
+      document.getElementById("middlePanel").innerHTML = `
+        <div class="panel-title">
+          周边船舶信息
+          <span>辅助态势判断</span>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-title">${v.name}</div>
+
+          <div class="detail-row">
+            <div class="detail-key">船舶企业</div>
+            <div class="detail-val">${v.company}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">航线</div>
+            <div class="detail-val">${v.from} → ${v.dest}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">航速 / 吃水</div>
+            <div class="detail-val">${v.speed} km/h｜${v.draft} m</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">状态</div>
+            <div class="detail-val ${getStatusClass(v.level)}">${v.status}</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">平台作用</div>
+            <div class="detail-val">作为目标船前方船舶密度、拥堵风险和通行判断参考</div>
+          </div>
+
+          <div class="action-row">
+            <button class="btn">查看位置</button>
+            <button class="btn">加入关注</button>
+            <button class="btn">返回目标船</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderBottomOverview() {
+      document.getElementById("bottomPanel").innerHTML = `
+        <div class="panel-title">
+          公司船队态势
+          <span>凯乔船务有限公司</span>
+        </div>
+
+        <div class="list">
+          <div class="list-item">
+            <div class="list-icon">⚓</div>
+            <div>
+              <div class="list-main">凯乔1001｜目标船</div>
+              <div class="list-sub">重庆港 → 万州港｜正常航行｜ETA 18:20</div>
+            </div>
+            <button class="small-btn locate-btn" data-id="target-kq1001">定位</button>
+          </div>
+
+          <div class="list-item">
+            <div class="list-icon" style="color:#2b83ff;">⚓</div>
+            <div>
+              <div class="list-main">凯乔1002｜正常航行</div>
+              <div class="list-sub">涪陵港 → 云阳港｜航速 9.6 km/h</div>
+            </div>
+            <button class="small-btn locate-btn" data-id="kq1002">定位</button>
+          </div>
+
+          <div class="list-item">
+            <div class="list-icon" style="color:#ff4b4b;">⚠</div>
+            <div>
+              <div class="list-main">凯乔1005｜拥堵预警</div>
+              <div class="list-sub">万州港前方水域拥堵，建议调整靠泊窗口</div>
+            </div>
+            <button class="small-btn locate-btn" data-id="kq1005">定位</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderOverview() {
+      document.getElementById("mapHeaderText").innerText =
+        "演示场景 · 凯乔1001 重庆港至万州港航次";
+
+      renderTopOverview();
+      renderTargetDetail();
+      renderBottomOverview();
+      map.setView([30.05, 107.72], 8);
+    }
+
+    function renderVoyage() {
+      document.getElementById("mapHeaderText").innerText =
+        "目标船凯乔1001航次跟踪 · 航线已按长江主航道加密贴合";
+
+      document.getElementById("topPanel").innerHTML = `
+        <div class="panel-title">
+          目标航次概览
+          <span>重庆港 → 万州港</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-num">42%</div>
+            <div class="stat-name">当前航程进度</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">10.8</div>
+            <div class="stat-name">当前航速 km/h</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">18:20</div>
+            <div class="stat-name">预计到达 ETA</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">3</div>
+            <div class="stat-name">风险提醒</div>
+          </div>
+        </div>
+      `;
+
+      renderTargetDetail();
+      renderBottomOverview();
+      locateVessel(targetShipId);
+    }
+
+    function renderSensor() {
+      document.getElementById("mapHeaderText").innerText =
+        "船端数据感知 · 定位、吃水、燃油、机舱与网关状态";
+
+      document.getElementById("topPanel").innerHTML = `
+        <div class="panel-title">
+          船端数据状态
+          <span>凯乔1001</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-num">在线</div>
+            <div class="stat-name">船载智能网关</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">4.8m</div>
+            <div class="stat-name">雷达吃水</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">正常</div>
+            <div class="stat-name">机舱状态</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">30s</div>
+            <div class="stat-name">数据刷新</div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("middlePanel").innerHTML = `
+        <div class="panel-title">
+          船端感知能力
+          <span>不是单纯地图</span>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-title">多源数据融合</div>
+
+          <div class="detail-row">
+            <div class="detail-key">定位数据</div>
+            <div class="detail-val">北斗 / AIS 船位、航速、航向</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">吃水数据</div>
+            <div class="detail-val">雷达吃水测量，用于判断载货状态和航行安全</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">燃油数据</div>
+            <div class="detail-val">燃油流量波动监测，用于油耗异常提醒</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">机舱状态</div>
+            <div class="detail-val">机舱关键状态在线采集，辅助风险判断</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">平台价值</div>
+            <div class="detail-val">为ETA预测、风险预警和调度建议提供数据基础</div>
+          </div>
+        </div>
+      `;
+
+      renderBottomOverview();
+    }
+
+    function renderEta() {
+      document.getElementById("mapHeaderText").innerText =
+        "ETA航次预测 · 结合船速、航道、港口与前方船舶态势";
+
+      document.getElementById("topPanel").innerHTML = `
+        <div class="panel-title">
+          ETA预测结果
+          <span>凯乔1001</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-num">18:20</div>
+            <div class="stat-name">预计到达万州港</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">+0.8h</div>
+            <div class="stat-name">拥堵影响</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">86%</div>
+            <div class="stat-name">预测稳定度</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">6艘</div>
+            <div class="stat-name">前方船舶密度</div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("middlePanel").innerHTML = `
+        <div class="panel-title">
+          预测依据
+          <span>航次模型输入</span>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-title">ETA预测逻辑</div>
+
+          <div class="detail-row">
+            <div class="detail-key">当前航速</div>
+            <div class="detail-val">10.8 km/h，处于正常航速区间</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">航线距离</div>
+            <div class="detail-val">重庆港至万州港，当前完成约42%</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">港口状态</div>
+            <div class="detail-val">万州港前方船舶密度升高，靠泊窗口偏紧</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">周边船舶</div>
+            <div class="detail-val">前方航道存在低速船舶，可能影响通过时间</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">输出结果</div>
+            <div class="detail-val">预计到港 18:20，建议提前确认靠泊计划</div>
+          </div>
+        </div>
+      `;
+
+      renderBottomOverview();
+    }
+
+    function renderWarning() {
+      document.getElementById("mapHeaderText").innerText =
+        "动态风险预警 · 万州港区拥堵、低速船舶与靠泊窗口风险";
+
+      document.getElementById("topPanel").innerHTML = `
+        <div class="panel-title">
+          风险预警概览
+          <span>围绕凯乔1001</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-num status-danger">1</div>
+            <div class="stat-name">高风险</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num status-warn">2</div>
+            <div class="stat-name">中风险</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">6</div>
+            <div class="stat-name">前方影响船舶</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">18min</div>
+            <div class="stat-name">建议响应时长</div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("middlePanel").innerHTML = `
+        <div class="panel-title">
+          风险事件
+          <span>可处置</span>
+        </div>
+
+        <div class="list">
+          <div class="list-item">
+            <div class="list-icon" style="color:#ff4b4b;">⚠</div>
+            <div>
+              <div class="list-main">万州港区拥堵预警</div>
+              <div class="list-sub">前方船舶密度升高，预计影响到港 +0.8h</div>
+            </div>
+            <button class="small-btn">处置</button>
+          </div>
+
+          <div class="list-item">
+            <div class="list-icon" style="color:#ff9b22;">⚓</div>
+            <div>
+              <div class="list-main">低速船舶影响</div>
+              <div class="list-sub">前方存在低速船舶，建议持续监控航速变化</div>
+            </div>
+            <button class="small-btn">查看</button>
+          </div>
+
+          <div class="list-item">
+            <div class="list-icon" style="color:#ff9b22;">▤</div>
+            <div>
+              <div class="list-main">靠泊窗口紧张</div>
+              <div class="list-sub">建议提前与万州港确认靠泊与装卸顺序</div>
+            </div>
+            <button class="small-btn">确认</button>
+          </div>
+        </div>
+      `;
+
+      renderBottomOverview();
+    }
+
+    function renderDispatch() {
+      document.getElementById("mapHeaderText").innerText =
+        "智能调度建议 · 根据目标船和公司船队状态输出辅助决策";
+
+      document.getElementById("topPanel").innerHTML = `
+        <div class="panel-title">
+          调度建议效果
+          <span>辅助决策</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-num">3</div>
+            <div class="stat-name">当前建议</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">92%</div>
+            <div class="stat-name">建议采纳率</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">11.6%</div>
+            <div class="stat-name">等待时长下降</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">14.8%</div>
+            <div class="stat-name">周转效率提升</div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("middlePanel").innerHTML = `
+        <div class="panel-title">
+          针对凯乔1001的调度建议
+          <span>可采纳</span>
+        </div>
+
+        <div class="list">
+          <div class="list-item">
+            <div class="list-icon">↗</div>
+            <div>
+              <div class="list-main">错峰通过万州港前水域</div>
+              <div class="list-sub">建议延后约45分钟进入拥堵水域，降低等待时间</div>
+            </div>
+            <button class="small-btn">采纳</button>
+          </div>
+
+          <div class="list-item">
+            <div class="list-icon" style="color:#ffb13d;">⚓</div>
+            <div>
+              <div class="list-main">提前确认靠泊窗口</div>
+              <div class="list-sub">万州港作业窗口偏紧，建议提前锁定装卸顺序</div>
+            </div>
+            <button class="small-btn">查看</button>
+          </div>
+
+          <div class="list-item">
+            <div class="list-icon" style="color:#9db8ff;">▤</div>
+            <div>
+              <div class="list-main">保持当前航速</div>
+              <div class="list-sub">当前航速与ETA预测匹配，暂不建议提速</div>
+            </div>
+            <button class="small-btn">确认</button>
+          </div>
+        </div>
+      `;
+
+      renderBottomOverview();
+    }
+
+    function renderFleet() {
+      document.getElementById("mapHeaderText").innerText =
+        "公司船队运行态势 · 凯乔船只在重庆长江沿线运行情况";
+
+      document.getElementById("topPanel").innerHTML = `
+        <div class="panel-title">
+          凯乔船队状态
+          <span>重点展示</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-num">4</div>
+            <div class="stat-name">当前展示公司船只</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">2</div>
+            <div class="stat-name">正常航行</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">1</div>
+            <div class="stat-name">低速航行</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num status-danger">1</div>
+            <div class="stat-name">拥堵预警</div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("middlePanel").innerHTML = `
+        <div class="panel-title">
+          公司船只列表
+          <span>点击定位</span>
+        </div>
+
+        <div class="list">
+          ${[targetShip, ...companyShips].map(v => `
+            <div class="list-item">
+              <div class="list-icon" style="color:${v.id === targetShipId ? '#00eaff' : v.level === 'danger' ? '#ff4b4b' : v.level === 'slow' ? '#ff9b22' : '#2b83ff'};">⚓</div>
+              <div>
+                <div class="list-main">${v.name}｜${v.status}</div>
+                <div class="list-sub">${v.from} → ${v.dest}｜${v.speed} km/h｜ETA ${v.eta}</div>
+              </div>
+              <button class="small-btn locate-btn" data-id="${v.id}">定位</button>
+            </div>
+          `).join("")}
+        </div>
+      `;
+
+      renderBottomOverview();
+    }
+
+    function renderAnalysis() {
+      document.getElementById("mapHeaderText").innerText =
+        "运营数据分析 · 展示系统带来的效率、预警和调度价值";
+
+      document.getElementById("topPanel").innerHTML = `
+        <div class="panel-title">
+          运营成效
+          <span>试点数据</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-num">14.8%</div>
+            <div class="stat-name">周转效率提升</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">11.6%</div>
+            <div class="stat-name">等待时长下降</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">86%</div>
+            <div class="stat-name">ETA预测稳定度</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-num">91%</div>
+            <div class="stat-name">船端在线率</div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("middlePanel").innerHTML = `
+        <div class="panel-title">
+          系统优势总结
+          <span>比赛展示重点</span>
+        </div>
+
+        <div class="detail-card">
+          <div class="detail-title">从“看见船”到“会调度”</div>
+
+          <div class="detail-row">
+            <div class="detail-key">数据采集</div>
+            <div class="detail-val">船端网关采集定位、吃水、油耗、机舱等运行数据</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">态势融合</div>
+            <div class="detail-val">叠加重庆长江沿线港口、周边船舶与风险水域</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">预测预警</div>
+            <div class="detail-val">预测ETA，识别拥堵、低速、靠泊窗口和油耗异常</div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-key">调度决策</div>
+            <div class="detail-val">输出错峰通行、靠泊确认、航速调整等建议</div>
+          </div>
+        </div>
+      `;
+
+      renderBottomOverview();
+    }
+
+    function renderView(view) {
+      document.getElementById("pageSubTitle").innerText = viewNames[view];
+
+      if (view === "overview") renderOverview();
+      if (view === "voyage") renderVoyage();
+      if (view === "sensor") renderSensor();
+      if (view === "eta") renderEta();
+      if (view === "warning") renderWarning();
+      if (view === "dispatch") renderDispatch();
+      if (view === "fleet") renderFleet();
+      if (view === "analysis") renderAnalysis();
+
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 80);
+    }
+
+    function locateVessel(id) {
+      const v = allVessels.find(item => item.id === id);
+      const marker = vesselMarkers[id];
+
+      if (v && marker) {
+        map.setView([v.lat, v.lng], id === targetShipId ? 11 : 12);
+        marker.openPopup();
+
+        if (v.id === targetShipId) {
+          renderTargetDetail();
+        } else if (v.company === "凯乔船务有限公司") {
+          renderCompanyShip(v);
+        } else {
+          renderNearbyShip(v);
+        }
+      }
+    }
+
+    function searchShip() {
+      const keyword = document.getElementById("shipSearchInput").value.trim();
+
+      if (!keyword) return;
+
+      const v = allVessels.find(item =>
+        item.name.includes(keyword) ||
+        item.mmsi.includes(keyword) ||
+        item.company.includes(keyword) ||
+        item.dest.includes(keyword)
+      );
+
+      if (v) {
+        locateVessel(v.id);
+      } else {
+        alert("未找到相关船舶，请检查船名、MMSI 或目的港。");
+      }
+    }
+
+    document.querySelectorAll(".menu-item").forEach(item => {
+      item.addEventListener("click", () => {
+        document.querySelectorAll(".menu-item").forEach(i => i.classList.remove("active"));
+        item.classList.add("active");
+
+        renderView(item.dataset.view);
+      });
+    });
+
+    document.body.addEventListener("click", e => {
+      if (e.target.classList.contains("locate-btn")) {
+        locateVessel(e.target.dataset.id);
+      }
+
+      if (e.target.closest("#shipTableBody tr")) {
+        const tr = e.target.closest("tr");
+        locateVessel(tr.dataset.id);
+      }
+    });
+
+    document.getElementById("shipSearchBtn").addEventListener("click", searchShip);
+
+    document.getElementById("shipSearchInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") searchShip();
+    });
+
+    document.getElementById("tableBtn").addEventListener("click", () => {
+      document.getElementById("bottomTable").classList.toggle("show");
+    });
+
+    document.getElementById("closeTable").addEventListener("click", () => {
+      document.getElementById("bottomTable").classList.remove("show");
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      locateVessel(targetShipId);
+    });
+
+    document.getElementById("remoteBtn").addEventListener("click", () => {
+      document.getElementById("mapWrap").classList.remove("remote-dark");
+      document.getElementById("remoteBtn").classList.add("active");
+      document.getElementById("darkRemoteBtn").classList.remove("active");
+    });
+
+    document.getElementById("darkRemoteBtn").addEventListener("click", () => {
+      document.getElementById("mapWrap").classList.add("remote-dark");
+      document.getElementById("darkRemoteBtn").classList.add("active");
+      document.getElementById("remoteBtn").classList.remove("active");
+    });
+
+    document.getElementById("toggleTargetRoute").addEventListener("change", e => {
+      e.target.checked ? map.addLayer(targetRouteLayer) : map.removeLayer(targetRouteLayer);
+    });
+
+    document.getElementById("toggleCompanyShips").addEventListener("change", e => {
+      e.target.checked ? map.addLayer(companyShipLayer) : map.removeLayer(companyShipLayer);
+    });
+
+    document.getElementById("toggleOtherShips").addEventListener("change", e => {
+      e.target.checked ? map.addLayer(otherShipLayer) : map.removeLayer(otherShipLayer);
+    });
+
+    document.getElementById("toggleLabels").addEventListener("change", e => {
+      e.target.checked ? map.addLayer(labelLayer) : map.removeLayer(labelLayer);
+    });
+
+    document.getElementById("togglePorts").addEventListener("change", e => {
+      e.target.checked ? map.addLayer(portLayer) : map.removeLayer(portLayer);
+    });
+
+    document.getElementById("toggleRisk").addEventListener("change", e => {
+      e.target.checked ? map.addLayer(riskLayer) : map.removeLayer(riskLayer);
+    });
+
+    document.getElementById("toggleGrid").addEventListener("change", e => {
+      document.getElementById("remoteGrid").classList.toggle("hide", !e.target.checked);
+    });
+
+    function updateTime() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      const h = String(now.getHours()).padStart(2, "0");
+      const min = String(now.getMinutes()).padStart(2, "0");
+
+      document.getElementById("nowTime").innerText = `${y}-${m}-${d} ${h}:${min}`;
+    }
+
+    drawMap();
+    renderOverview();
+    updateTime();
+    setInterval(updateTime, 1000 * 30);
+
+    setTimeout(() => {
+      map.invalidateSize();
+      locateVessel(targetShipId);
+    }, 300);
+  </script>
+</body>
+</html>

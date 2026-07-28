@@ -1,25 +1,351 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>我的第一个网站</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>凯乔航运｜辅助调度系统登录</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 100px;
-      background: #f4f7fb;
-      color: #222;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
-    h1 {
-      color: #0969da;
+    body {
+      min-height: 100vh;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      color: #ffffff;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(45, 139, 255, 0.55), transparent 27%),
+        radial-gradient(circle at 78% 18%, rgba(88, 239, 255, 0.25), transparent 28%),
+        radial-gradient(circle at 50% 120%, rgba(12, 88, 210, 0.55), transparent 38%),
+        linear-gradient(135deg, #03091f 0%, #071c4d 48%, #020817 100%);
+      overflow: hidden;
     }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      position: relative;
+    }
+
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(104, 210, 255, 0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(104, 210, 255, 0.055) 1px, transparent 1px),
+        linear-gradient(120deg, transparent 0%, rgba(78, 164, 255, 0.18) 48%, transparent 52%);
+      background-size: 44px 44px, 44px 44px, 280px 100%;
+      animation: gridMove 18s linear infinite;
+      opacity: 0.95;
+    }
+
+    .page::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 210px;
+      background: url("data:image/svg+xml,%3Csvg width='1400' height='260' viewBox='0 0 1400 260' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 160 C210 112 336 200 520 158 C720 112 890 110 1080 164 C1210 202 1320 174 1400 150 L1400 260 L0 260 Z' fill='%230e54bf' fill-opacity='.24'/%3E%3Cpath d='M0 205 C240 166 390 238 590 198 C760 164 940 170 1115 212 C1245 244 1330 218 1400 200 L1400 260 L0 260 Z' fill='%236de7ff' fill-opacity='.10'/%3E%3Cpath d='M140 112 L255 78 L385 112 L410 144 L120 144 Z' fill='%23ffffff' fill-opacity='.10'/%3E%3Cpath d='M250 20 L310 78 L202 78 Z' fill='%23ffffff' fill-opacity='.08'/%3E%3C/svg%3E") center bottom / cover no-repeat;
+      opacity: 0.9;
+      filter: drop-shadow(0 -20px 42px rgba(47, 131, 255, 0.16));
+    }
+
+    .tech-orbit {
+      position: absolute;
+      width: 780px;
+      height: 780px;
+      border: 1px solid rgba(109, 231, 255, 0.13);
+      border-radius: 50%;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%) rotate(-18deg);
+      z-index: 1;
+      pointer-events: none;
+      box-shadow: inset 0 0 80px rgba(47, 131, 255, 0.06);
+    }
+
+    .tech-orbit::before,
+    .tech-orbit::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(47, 131, 255, 0.11);
+      inset: 76px;
+    }
+
+    .tech-orbit::after {
+      inset: 154px;
+      border-color: rgba(255, 216, 77, 0.12);
+    }
+
+    .scan-line {
+      position: absolute;
+      width: 100%;
+      height: 1px;
+      left: 0;
+      top: 18%;
+      z-index: 1;
+      background: linear-gradient(90deg, transparent, rgba(109, 231, 255, 0.65), transparent);
+      animation: scan 5.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 2;
+      padding: 42px 38px 36px;
+      border-radius: 30px;
+      background:
+        linear-gradient(180deg, rgba(9, 31, 83, 0.88), rgba(2, 11, 34, 0.9)),
+        linear-gradient(135deg, rgba(109, 231, 255, 0.18), transparent 36%, rgba(255, 216, 77, 0.09));
+      border: 1px solid rgba(139, 207, 255, 0.34);
+      box-shadow:
+        0 28px 90px rgba(0, 15, 50, 0.56),
+        inset 0 1px 0 rgba(255, 255, 255, 0.10),
+        inset 0 0 36px rgba(47, 131, 255, 0.10);
+      backdrop-filter: blur(22px);
+      overflow: hidden;
+    }
+
+    .login-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 30px;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(109, 231, 255, 0.9), rgba(47, 131, 255, 0.08), rgba(255, 216, 77, 0.55));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    .login-card::after {
+      content: "";
+      position: absolute;
+      left: -30%;
+      top: -1px;
+      width: 60%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #6de7ff, transparent);
+      animation: lightSweep 4.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 34px;
+    }
+
+.brand h1 {
+      font-size: 27px;
+      letter-spacing: 3px;
+      font-weight: 900;
+      margin-bottom: 9px;
+      text-shadow: 0 0 18px rgba(109, 231, 255, 0.28);
+    }
+
+    .brand p {
+      display: inline-block;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(109, 231, 255, 0.22);
+      color: #c9dcff;
+      background: rgba(47, 131, 255, 0.08);
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 9px;
+      color: #d9e7ff;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .field {
+      position: relative;
+    }
+
+    .field svg {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      color: #74b5ff;
+      pointer-events: none;
+    }
+
+    input {
+      width: 100%;
+      height: 54px;
+      padding: 0 16px 0 46px;
+      border-radius: 16px;
+      border: 1px solid rgba(150, 193, 255, 0.30);
+      outline: none;
+      background: linear-gradient(180deg, rgba(3, 14, 42, 0.72), rgba(7, 28, 72, 0.56));
+      color: #ffffff;
+      font-size: 15px;
+      transition: 0.2s ease;
+      box-shadow: inset 0 0 18px rgba(47, 131, 255, 0.08);
+    }
+
+    input::placeholder {
+      color: rgba(219, 231, 255, 0.46);
+    }
+
+    input:focus {
+      border-color: rgba(109, 231, 255, 0.78);
+      box-shadow: 0 0 0 4px rgba(47, 131, 255, 0.18);
+    }
+
+    .login-button {
+      width: 100%;
+      height: 54px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 17px;
+      cursor: pointer;
+      color: #031130;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, #ffd84d 0%, #88efff 46%, #3f93ff 100%);
+      box-shadow:
+        0 18px 42px rgba(47, 131, 255, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-button::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -80%;
+      width: 55%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+      transform: skewX(-20deg);
+      animation: buttonSweep 3.6s ease-in-out infinite;
+    }
+
+    .login-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 24px 48px rgba(47, 131, 255, 0.44);
+    }
+
+    .message {
+      min-height: 22px;
+      margin-top: 16px;
+      text-align: center;
+      font-size: 13px;
+      color: #9eefff;
+    }
+      @keyframes gridMove {
+      0% { background-position: 0 0, 0 0, -280px 0; }
+      100% { background-position: 44px 44px, 44px 44px, 280px 0; }
+    }
+
+    @keyframes scan {
+      0%, 100% { top: 16%; opacity: 0; }
+      18%, 82% { opacity: 1; }
+      50% { top: 82%; opacity: 0.75; }
+    }
+
+    @keyframes lightSweep {
+      0%, 100% { left: -45%; opacity: 0; }
+      45% { opacity: 1; }
+      70% { left: 85%; opacity: 0; }
+    }
+
+    @keyframes buttonSweep {
+      0%, 100% { left: -80%; opacity: 0; }
+      45% { opacity: 1; }
+      70% { left: 125%; opacity: 0; }
+    }
+
   </style>
 </head>
 <body>
-  <h1>欢迎来到我的网站！</h1>
-  <p>这是我创建的第一个网页。</p>
+  <main class="page">
+    <div class="tech-orbit"></div>
+    <div class="scan-line"></div>
+    <form class="login-card" id="loginForm">
+      <div class="brand">
+        <h1>凯万贸易有限公司</h1>
+        <p>内河散货船队物联智航辅助调度系统</p>
+      </div>
+
+      <div class="form-group">
+        <label for="account">企业账号</label>
+        <div class="field">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 8h4M8 12h4M8 16h4M16 10h2a2 2 0 0 1 2 2v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input id="account" type="text" placeholder="请输入企业账号" autocomplete="username" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">登录密码</label>
+        <div class="field">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M7 10V8a5 5 0 0 1 10 0v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5" y="10" width="14" height="10" rx="3" stroke="currentColor" stroke-width="2"/><path d="M12 14v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input id="password" type="password" placeholder="请输入登录密码" autocomplete="current-password" />
+        </div>
+      </div>
+
+      <button type="submit" class="login-button">登录</button>
+      <div class="message" id="message"></div>
+    </form>
+  </main>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const message = document.getElementById('message');
+    const DEMO_ACCOUNT = 'admin';
+    const DEMO_PASSWORD = '123456';
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      const account = document.getElementById('account').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      if (!account || !password) {
+        message.textContent = '请输入企业账号和登录密码。';
+        message.style.color = '#ffd84d';
+        return;
+      }
+
+      if (account !== DEMO_ACCOUNT || password !== DEMO_PASSWORD) {
+        message.textContent = '账号或密码错误，请重新输入。';
+        message.style.color = '#ff8b8b';
+        return;
+      }
+
+      message.textContent = '登录成功，正在进入调度系统...';
+      message.style.color = '#9eefff';
+      sessionStorage.setItem('demoLoggedIn', 'true');
+
+      setTimeout(function () {
+        window.location.href = './平台.html';
+      }, 500);
+    });
+  </script>
 </body>
 </html>
